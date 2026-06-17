@@ -173,8 +173,11 @@ pytest
   (never `float`), so large dollar amounts keep full precision.
 - **Retries are automatic.** Idempotent GETs retry on 429 / 5xx / network errors
   with exponential backoff (configurable `max_retries`, default 2).
-- **Rate limits** are per account, hourly (Free 100 / Basic 1,000 / Pro 10,000
-  req/hr). Read `client.last_rate_limit` after any call — the bot logs it each poll.
+- **Rate limits** are per account and two-layer — a per-minute burst plus a
+  per-day volume cap (Free 20/min + 100/day · Basic 60/min + 10,000/day ·
+  Pro 300/min + 100,000/day). Read `client.last_rate_limit` after any call (the
+  bot logs it each poll); the `X-RateLimit-*` headers report the daily layer,
+  which resets at 00:00 UTC.
 - **Failed sends don't lose articles.** If SMTP delivery raises, the batch is *not*
   marked seen, so the next poll retries it.
 - **Never commit your key.** `.env`, `out/`, and the state file are git-ignored.
