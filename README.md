@@ -175,7 +175,7 @@ pytest
   with exponential backoff (configurable `max_retries`, default 2).
 - **Rate limits** are per account and two-layer — a per-minute burst plus a
   per-day volume cap (Free 20/min + 100/day · Basic 60/min + 10,000/day ·
-  Pro 300/min + 100,000/day). Read `client.last_rate_limit` after any call (the
+  Pro 150/min + 100,000/day). Read `client.last_rate_limit` after any call (the
   bot logs it each poll); the `X-RateLimit-*` headers report the daily layer,
   which resets at 00:00 UTC.
 - **Failed sends don't lose articles.** If SMTP delivery raises, the batch is *not*
