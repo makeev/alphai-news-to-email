@@ -1,4 +1,4 @@
-"""alphai-news-to-email — email yourself high-relevance AlphaAI financial news.
+"""alphai-news-to-email — email yourself high-relevance AlphAI financial news.
 
 A small, deployable app built on top of the `alphai-sdk` Python client. Each poll
 it pulls the news feed for your watchlist, keeps only the unseen high-relevance

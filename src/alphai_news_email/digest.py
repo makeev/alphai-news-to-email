@@ -139,7 +139,7 @@ def build_subject(alerts: list[Alert], prefix: str = "") -> str:
     where = ", ".join(tickers[:4]) if tickers else "market"
     if len(tickers) > 4:
         where += f" +{len(tickers) - 4}"
-    head = f"{relevance_emoji(top.relevance)} {n} AlphaAI alert{'s' if n != 1 else ''} · {where}"
+    head = f"{relevance_emoji(top.relevance)} {n} AlphAI alert{'s' if n != 1 else ''} · {where}"
     if n == 1:
         head += f" — {truncate(top.title, 60)}"
     return f"{prefix} {head}".strip() if prefix else head
@@ -152,7 +152,7 @@ def build_subject(alerts: list[Alert], prefix: str = "") -> str:
 
 def render_text(alerts: list[Alert]) -> str:
     lines: list[str] = []
-    lines.append(f"AlphaAI — {len(alerts)} new high-relevance article(s)")
+    lines.append(f"AlphAI — {len(alerts)} new high-relevance article(s)")
     lines.append("=" * 60)
     for a in alerts:
         lines.append("")
@@ -240,7 +240,7 @@ style="background:#f2f4f7;padding:24px 12px;">
 style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;\
 overflow:hidden;font-family:{_FONT};box-shadow:0 1px 3px rgba(16,24,40,.08);">
         <tr><td style="background:#101828;padding:20px 28px;">
-          <span style="color:#ffffff;font-size:18px;font-weight:800;">AlphaAI</span>
+          <span style="color:#ffffff;font-size:18px;font-weight:800;">AlphAI</span>
           <span style="color:#98a2b3;font-size:14px;">&nbsp;· news alerts</span>
           <div style="color:#98a2b3;font-size:13px;margin-top:4px;">\
 {count} new high-relevance article{'s' if count != 1 else ''}</div>

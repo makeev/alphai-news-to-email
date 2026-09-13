@@ -2,7 +2,7 @@
 
 Email yourself **high-relevance financial news** — a small, deployable app built on
 [**alphai-sdk**](https://pypi.org/project/alphai-sdk/), the typed Python client for
-the [AlphaAI](https://alphai.io) REST API (relevance-scored, ticker-linked news plus
+the [AlphAI](https://alphai.io) REST API (relevance-scored, ticker-linked news plus
 SEC Form 4 insider data).
 
 Each poll it fetches the news feed for your watchlist, keeps only the **unseen,
@@ -14,7 +14,7 @@ sent twice.
 > Mail goes out through the Python standard library (`smtplib` / `email`), so
 > there is nothing else to install.
 
-<p align="center"><em>watchlist → AlphaAI feed → filter unseen &amp; high-relevance → one digest email</em></p>
+<p align="center"><em>watchlist → AlphAI feed → filter unseen &amp; high-relevance → one digest email</em></p>
 
 ---
 
@@ -102,7 +102,7 @@ the API key — and SMTP, when not in `--dry-run` — has a default.
 
 | Env | Default | Meaning |
 | --- | --- | --- |
-| `ALPHAI_API_KEY` | — | **Required.** Your AlphaAI key. |
+| `ALPHAI_API_KEY` | — | **Required.** Your AlphAI key. |
 | `WATCHLIST` | `NVDA,AAPL,MSFT,TSLA` | Tickers to watch, or `trending` for whole-market mode. |
 | `MIN_RELEVANCE` | `7` | Minimum relevance score (1–10) to alert. |
 | `CATEGORIES` / `EXCLUDE_CATEGORIES` | — | Restrict / drop news categories. |
@@ -185,7 +185,7 @@ pytest
 ## Links
 
 - SDK on PyPI — https://pypi.org/project/alphai-sdk/
-- AlphaAI — https://alphai.io
+- AlphAI — https://alphai.io
 - API keys — https://alphai.io/account/api-keys
 
 ## License

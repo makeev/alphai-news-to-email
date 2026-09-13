@@ -20,7 +20,7 @@ from .config import load_config, load_dotenv
 from .watcher import run
 
 _HELP = """\
-alphai-news-email — email yourself high-relevance AlphaAI financial news.
+alphai-news-email — email yourself high-relevance AlphAI financial news.
 
 Options:
   --watch              Poll forever (every POLL_INTERVAL_SECONDS) instead of once.

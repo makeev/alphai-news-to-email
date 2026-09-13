@@ -48,10 +48,10 @@ def test_relevance_emoji_tiers():
 
 def test_subject_single_vs_multiple():
     one = build_subject([make_alert()])
-    assert "1 AlphaAI alert" in one and "NVDA" in one
+    assert "1 AlphAI alert" in one and "NVDA" in one
 
     many = build_subject([make_alert(), make_alert(uid="2", ticker="AAPL", relevance=7)])
-    assert "2 AlphaAI alerts" in many
+    assert "2 AlphAI alerts" in many
     assert "NVDA" in many and "AAPL" in many
 
 
