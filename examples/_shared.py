@@ -1,7 +1,6 @@
 """Tiny helpers shared by the standalone example scripts.
 
-These examples only need the SDK and the standard library, so this module ships a
-~10-line ``.env`` loader rather than pulling in `python-dotenv`.
+Reuse the app's standard-library ``.env`` loader; no SMTP configuration is needed.
 """
 
 from __future__ import annotations
@@ -10,20 +9,15 @@ import os
 import sys
 from pathlib import Path
 
+from alphai_news_email.config import load_dotenv
+
 
 def load_env() -> None:
     """Load a sibling/parent ``.env`` into ``os.environ`` (real env vars win)."""
     here = Path(__file__).resolve()
     for candidate in (here.parent / ".env", here.parent.parent / ".env"):
         if candidate.is_file():
-            for raw in candidate.read_text(encoding="utf-8").splitlines():
-                line = raw.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                key, _, value = line.partition("=")
-                key, value = key.strip(), value.strip().strip('"').strip("'")
-                if key and key not in os.environ:
-                    os.environ[key] = value
+            load_dotenv(candidate)
             return
 
 

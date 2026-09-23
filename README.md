@@ -8,7 +8,7 @@ SEC Form 4 insider data).
 Each poll it fetches the news feed for your watchlist, keeps only the **unseen,
 high-relevance** stories, and emails them to you as a single digest (HTML +
 plaintext) over SMTP — **deduplicating across runs** so the same story is never
-sent twice.
+repeated while its UID remains in the local store.
 
 > Dependency-light by design: the only runtime dependency is `alphai-sdk` itself.
 > Mail goes out through the Python standard library (`smtplib` / `email`), so
@@ -19,6 +19,8 @@ sent twice.
 ---
 
 ## Quick start
+
+Requires Python 3.10+ and `alphai-sdk` 0.7.x. Install from this repository root.
 
 ```bash
 # 1. install (editable, with dev extras for the test suite)
@@ -36,7 +38,8 @@ alphai-news-email --dry-run --backfill=5
 
 No SMTP credentials yet? `--dry-run` writes the fully-rendered email to
 `./out/*.eml` instead of sending it, so you can preview exactly what would land in
-your inbox. Add the `SMTP_*` settings to `.env` and drop `--dry-run` to go live.
+your inbox. Preview runs keep separate state (`STATE_FILE` + `.dry-run`), so
+previewing does not suppress later email delivery. Add the `SMTP_*` settings to `.env` and drop `--dry-run` to go live.
 
 ---
 
@@ -86,7 +89,7 @@ Each poll:
 2. **Filter.** Drop anything whose UID is already in the dedup store.
 3. **Deliver.** Flatten the survivors into `Alert`s, render one digest email
    (most-relevant first), and send it.
-4. **Persist.** Record the delivered UIDs so they're never sent again.
+4. **Persist.** Record the delivered UIDs to deduplicate later polls.
 
 **First-run behavior.** With no state file yet, the bot establishes a *baseline*:
 it marks current articles as seen **without** emailing, so you aren't blasted with
@@ -106,7 +109,7 @@ the API key — and SMTP, when not in `--dry-run` — has a default.
 | `WATCHLIST` | `NVDA,AAPL,MSFT,TSLA` | Tickers to watch, or `trending` for whole-market mode. |
 | `MIN_RELEVANCE` | `7` | Minimum relevance score (1–10) to alert. |
 | `CATEGORIES` / `EXCLUDE_CATEGORIES` | — | Restrict / drop news categories. |
-| `PER_TICKER_LIMIT` | `5` | Max articles per ticker per poll. |
+| `PER_TICKER_LIMIT` | `5` | Max articles per ticker per poll (1–20). |
 | `POLL_INTERVAL_SECONDS` | `300` | Cadence in `--watch` mode. |
 | `STATE_FILE` | `.alerts-state.json` | Where the seen-UID dedup state is stored. |
 | `FIRST_RUN_BACKFILL` | `0` | On first run, deliver N newest; the rest seed silently. |
@@ -135,7 +138,7 @@ the API key — and SMTP, when not in `--dry-run` — has a default.
 It's cron-friendly — one invocation does one poll and exits:
 
 ```cron
-*/10 * * * * cd /opt/alphai-news-to-email && .venv/bin/alphai-news-email >> bot.log 2>&1
+0 * * * * cd /opt/alphai-news-to-email && .venv/bin/alphai-news-email >> bot.log 2>&1
 ```
 
 Or run it as a long-lived service with `alphai-news-email --watch` under systemd,
@@ -146,26 +149,36 @@ a `schedule:` trigger (store the key and SMTP secrets as repo secrets).
 
 ## Standalone SDK examples
 
-Two short scripts in [`examples/`](examples/) show the SDK directly, independent of
-the email app:
+Runnable scripts in [`examples/`](examples/) show the SDK directly, without SMTP
+configuration:
 
 ```bash
 python examples/quickstart.py TSLA   # news.list() with filters + enriched fields
 python examples/dashboard.py  AAPL   # compose 4 endpoints in parallel into a report
+python examples/earnings.py AAPL     # filing-verified reads; handles missing reports
+python examples/brief.py NVDA,AMD    # ranked watchlist snapshot + truncation flags
+python examples/radar.py            # news activity + snapshot freshness/tier delay
 ```
 
 ---
 
 ## Tests
 
-The digest renderer is covered by an **offline** test suite — no API key, no network:
+The **offline** suite checks rendering, polling through the installed SDK,
+first-run state, retries, filters, and preview isolation. No API key or network:
 
 ```bash
 pip install -e ".[dev]"
 pytest
+ruff check .
 ```
 
+GitHub Actions runs these checks on Python 3.10 and 3.13.
+
 ---
+
+An exported `ALPHAI_API_KEY` takes precedence over `.env`. If it is stale, run
+`unset ALPHAI_API_KEY` in your shell to use the key from `.env`.
 
 ## Things worth knowing
 
@@ -178,9 +191,32 @@ pytest
   Pro 150/min + 100,000/day). Read `client.last_rate_limit` after any call (the
   bot logs it each poll); the `X-RateLimit-*` headers report the daily layer,
   which resets at 00:00 UTC.
-- **Failed sends don't lose articles.** If SMTP delivery raises, the batch is *not*
-  marked seen, so the next poll retries it.
+- **Failed sends remain unseen.** A failed SMTP batch stays eligible for retry
+  while it is in the fetched page. Partial recipient failures count as failures;
+  recipients who already accepted the message can see a duplicate on retry.
+  A failed fetch or delivery exits non-zero in one-shot mode.
 - **Never commit your key.** `.env`, `out/`, and the state file are git-ignored.
+
+
+### Polling budget and coverage
+
+The default four tickers every 300 seconds use about **1,152 requests/day**,
+before retries, exceeding Free's 100/day. On Free, set
+`POLL_INTERVAL_SECONDS=3600` (96/day for four tickers), use fewer symbols, or poll
+less often. Other scripts and retries share that budget. The hourly cron above
+uses the same 96/day budget.
+
+This app samples one recent page per ticker, capped by `PER_TICKER_LIMIT`; trending
+samples a ranked snapshot. Both modes apply the configured relevance and category
+filters. Busy periods and late arrivals can be missed, and failed delivery is
+retried only while the article remains in that sample. This is not a durable queue.
+For complete incremental ingestion, use the SDK's `news.list(sort="ingested", ...)`,
+drain pages, persist cursors, and keep a delivery outbox.
+
+The store retains the latest 5,000 UIDs. Run only one process per state file, keep
+it on persistent storage (including under GitHub Actions), and use a new state file
+when changing watchlist or filters. Repeated dry runs also deduplicate; remove only
+the `.dry-run` state file to preview the same batch again.
 
 ## Links
 

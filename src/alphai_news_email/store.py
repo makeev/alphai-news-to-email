@@ -31,6 +31,10 @@ class SeenStore:
     def size(self) -> int:
         return len(self._seen)
 
+    def mark_baselined(self) -> None:
+        """Seed only once, including during a long-lived watch session."""
+        self._fresh_run = False
+
     def load(self) -> None:
         """Read prior state from disk. A missing file means this is the first run."""
         try:

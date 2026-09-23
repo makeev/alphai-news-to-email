@@ -48,6 +48,14 @@ def collect_unseen(client: Client, config: AppConfig, store: SeenStore) -> list[
     seen_this_poll: set[str] = set()
 
     def consider(article: RichNewsArticle, ticker: str) -> None:
+        enrichment = article.enrichment
+        category = getattr(enrichment.category, "value", enrichment.category)
+        if enrichment.relevance_score < config.min_relevance:
+            return
+        if config.categories and category not in config.categories:
+            return
+        if config.exclude_categories and category in config.exclude_categories:
+            return
         uid = article.original.uid
         if store.has(uid) or uid in seen_this_poll:
             return
@@ -68,6 +76,7 @@ def collect_unseen(client: Client, config: AppConfig, store: SeenStore) -> list[
                 category=config.categories or None,
                 exclude_categories=config.exclude_categories or None,
                 collapse_stories=True,
+                page_size=min(20, max(1, config.per_ticker_limit)),
             )
             return symbol, page.results[: config.per_ticker_limit]
 
@@ -86,13 +95,13 @@ def poll_once(
     store: SeenStore,
     sender: EmailSender,
     log: Logger = _default_log,
-) -> None:
+) -> bool:
     """Run a single poll cycle: collect, (seed on first run), email, persist."""
     try:
         found = collect_unseen(client, config, store)
     except AlphaAIError as err:
         log(f"⚠ fetch failed: {err}")
-        return
+        return False
 
     to_deliver = found
 
@@ -103,6 +112,8 @@ def poll_once(
         to_deliver = newest_first[: config.first_run_backfill]
         for article, _ in newest_first[config.first_run_backfill :]:
             store.add(article.original.uid)
+        store.save()
+        store.mark_baselined()
         log(
             f"baseline established: {len(newest_first) - len(to_deliver)} article(s) "
             f"marked seen, delivering {len(to_deliver)} (backfill={config.first_run_backfill})."
@@ -120,7 +131,7 @@ def poll_once(
             dest = sender.send(subject, text_body, html_body)
         except Exception as err:  # don't mark seen if delivery failed — retry next poll
             log(f"✗ email send failed: {err}")
-            return
+            return False
         log(f"✉ delivered {len(alerts)} article(s) → {dest}")
         for alert in alerts:
             store.add(alert.uid)
@@ -130,6 +141,7 @@ def poll_once(
     rate = getattr(client, "last_rate_limit", None)
     if rate is not None and rate.limit is not None:
         log(f"rate limit: {rate.remaining}/{rate.limit} remaining")
+    return True
 
 
 def run(config: AppConfig, log: Logger = _default_log) -> int:
@@ -138,7 +150,7 @@ def run(config: AppConfig, log: Logger = _default_log) -> int:
     Returns a process exit code (0 on success, non-zero on fatal misconfiguration).
     """
     try:
-        config.email.validate()
+        config.validate()
     except ValueError as err:
         log(f"✗ {err}")
         return 2
@@ -162,8 +174,7 @@ def run(config: AppConfig, log: Logger = _default_log) -> int:
 
     with client:
         if not config.watch:
-            poll_once(client, config, store, sender, log)
-            return 0
+            return 0 if poll_once(client, config, store, sender, log) else 1
 
         # Long-lived watch mode. Poll, sleep, repeat — until Ctrl-C.
         log(f"watch mode: polling every {config.poll_interval_seconds}s (Ctrl-C to stop)")

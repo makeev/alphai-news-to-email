@@ -4,6 +4,7 @@
 # Bot runtime state and rendered dry-run emails
 .alerts-state.json
 .alerts-state.json.tmp
+.alerts-state.json.dry-run*
 out/
 *.eml
 

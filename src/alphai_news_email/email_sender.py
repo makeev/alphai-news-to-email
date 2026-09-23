@@ -71,7 +71,9 @@ class EmailSender:
     def _authenticate_and_send(self, smtp: smtplib.SMTP, msg: EmailMessage) -> None:
         if self.config.username:
             smtp.login(self.config.username, self.config.password or "")
-        smtp.send_message(msg)
+        refused = smtp.send_message(msg)
+        if refused:
+            raise smtplib.SMTPRecipientsRefused(refused)
 
     def _write_eml(self, msg: EmailMessage, subject: str) -> str:
         out_dir = Path(self.config.out_dir)

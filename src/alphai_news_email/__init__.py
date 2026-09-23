@@ -3,7 +3,7 @@
 A small, deployable app built on top of the `alphai-sdk` Python client. Each poll
 it pulls the news feed for your watchlist, keeps only the unseen high-relevance
 stories, and emails them to you as a single digest (HTML + plaintext) over SMTP —
-deduplicating across runs so the same story is never sent twice.
+deduplicating successful delivery across runs while UIDs remain in local state.
 
 The package is intentionally dependency-light: the only runtime dependency is
 `alphai-sdk` itself. Email goes out through the Python standard library

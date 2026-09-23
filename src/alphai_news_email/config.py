@@ -12,6 +12,7 @@ A tiny `.env` loader is included so you don't need `python-dotenv` — it parses
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,7 +41,14 @@ def load_dotenv(path: str | os.PathLike[str] = ".env") -> None:
             line = line[len("export ") :]
         key, _, value = line.partition("=")
         key = key.strip()
-        value = value.strip().strip('"').strip("'")
+        value = value.strip()
+        if value.startswith(("'", '"')):
+            quote = value[0]
+            value, separator, _ = value[1:].partition(quote)
+            if not separator:
+                raise ValueError(f"Unclosed quote in {p}: {key}")
+        else:
+            value = re.split(r"\s+#", value, maxsplit=1)[0].rstrip()
         if key and key not in os.environ:
             os.environ[key] = value
 
@@ -102,6 +110,17 @@ class AppConfig:
     first_run_backfill: int
     watch: bool
     email: EmailConfig
+
+    def validate(self) -> None:
+        if not 1 <= self.min_relevance <= 10:
+            raise ValueError("MIN_RELEVANCE must be between 1 and 10")
+        if not 1 <= self.per_ticker_limit <= 20:
+            raise ValueError("PER_TICKER_LIMIT must be between 1 and 20")
+        if self.poll_interval_seconds < 5:
+            raise ValueError("POLL_INTERVAL_SECONDS must be at least 5")
+        if self.first_run_backfill < 0:
+            raise ValueError("FIRST_RUN_BACKFILL must be non-negative")
+        self.email.validate()
 
 
 # --------------------------------------------------------------------------- #
@@ -229,6 +248,10 @@ def _load_email_config(flags: _Flags) -> EmailConfig:
 def load_config(argv: list[str]) -> AppConfig:
     """Build the effective :class:`AppConfig` from ``os.environ`` and ``argv``."""
     flags = _parse_flags(argv)
+    email = _load_email_config(flags)
+    state_file = os.environ.get("STATE_FILE", ".alerts-state.json")
+    if email.dry_run:
+        state_file += ".dry-run"
     return AppConfig(
         watchlist=_load_watchlist(flags.trending),
         min_relevance=_int_env("MIN_RELEVANCE", 7),
@@ -236,10 +259,10 @@ def load_config(argv: list[str]) -> AppConfig:
         exclude_categories=_list_env("EXCLUDE_CATEGORIES"),
         per_ticker_limit=_int_env("PER_TICKER_LIMIT", 5),
         poll_interval_seconds=flags.interval or _int_env("POLL_INTERVAL_SECONDS", 300),
-        state_file=os.environ.get("STATE_FILE", ".alerts-state.json"),
+        state_file=state_file,
         first_run_backfill=flags.backfill
         if flags.backfill is not None
         else _int_env("FIRST_RUN_BACKFILL", 0),
         watch=flags.watch,
-        email=_load_email_config(flags),
+        email=email,
     )

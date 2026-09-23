@@ -116,7 +116,7 @@ def truncate(text: str, limit: int) -> str:
 def short_time(dt: datetime | None) -> str:
     if dt is None:
         return ""
-    return dt.strftime("%b %-d, %H:%M %Z").strip() if hasattr(dt, "strftime") else str(dt)
+    return f"{dt:%b} {dt.day}, {dt:%H:%M %Z}".strip()
 
 
 def _label(alert: Alert) -> str:
